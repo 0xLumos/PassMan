@@ -1,4 +1,4 @@
-from passman import EncryptedPasswordManager
+from encrypt_decrypt import EncryptedPasswordManager
 
 from gui import GUI
 
