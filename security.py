@@ -25,6 +25,7 @@ class EncryptedPasswordManager:
         encrypted_data = (website_nonce + website_encrypted, username_nonce + username_encrypted, password_nonce + password_encrypted)
         self.passwords.append(encrypted_data)
         print("Password added successfully!")
+        print(self.passwords)
         return (website, username, password)
      
 
