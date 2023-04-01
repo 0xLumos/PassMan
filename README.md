@@ -10,3 +10,6 @@ Note: It is believed that this algorithm is not suitable for a real-world applic
 ## Storage : Blockchains, specifically smart contracts. (To be continued...)
 
 
+## Graphical User Interface (GUI) : tkinter-python3
+
+The GUI used for this app is from the known module tkinter, which is a python3 library for creating interfaces.
