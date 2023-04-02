@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from security import EncryptedPasswordManager
-
+from tkinter import messagebox
+import rsa
+import base64
+from cryptography.hazmat.primitives import serialization
 class GUI(tk.Tk):
 
     def __init__(self, *args, **kwargs):
@@ -17,7 +20,7 @@ class GUI(tk.Tk):
         self.frames = {}
 
         # Create an instance of the password manager class
-        self.password_manager = EncryptedPasswordManager("mysecretpassword")
+        self.password_manager = EncryptedPasswordManager()
 
         # Add pages to the dictionary
         for F in (HomePage, AboutPage, ContactPage, LoginPage):
@@ -29,7 +32,7 @@ class GUI(tk.Tk):
             frame.grid(row=0, column=0, sticky="nsew")
 
         # Show the home page initially
-        self.show_frame("HomePage")
+        self.show_frame("LoginPage")
 
     def show_frame(self, page_name):
         # Show the given frame
@@ -107,6 +110,8 @@ class HomePage(tk.Frame):
         add_password_page.pack(fill="both", expand=True)
 
 
+
+
 class LoginPage(tk.Frame):
 
     def __init__(self, parent, controller, password_manager):
@@ -114,26 +119,71 @@ class LoginPage(tk.Frame):
         self.controller = controller
         self.password_manager = password_manager
 
-
         # Create username label and entry
         username_label = tk.Label(self, text="Username:")
         username_label.pack(pady=5)
-        username_entry = tk.Entry(self)
-        username_entry.pack(pady=5)
+        self.username_entry = tk.Entry(self)
+        self.username_entry.pack(pady=5)
 
         # Create password label and entry
         password_label = tk.Label(self, text="Password:")
         password_label.pack(pady=5)
-        password_entry = tk.Entry(self, show="*")
-        password_entry.pack(pady=5)
+        self.password_entry = tk.Entry(self, show="*")
+        self.password_entry.pack(pady=5)
 
         # Create login button
-        login_button = tk.Button(self, text="Login", command=lambda: self.login(username_entry.get(), password_entry.get()))
+        login_button = tk.Button(self, text="Login", command=lambda: self.login(self.username_entry.get()))
         login_button.pack(pady=5)
+        
+        # Create generate key pair button
+        generate_key_button = tk.Button(self, text="Generate Key Pair", command=self.generate_key_pair)
+        generate_key_button.pack(pady=5)
 
-    def login(self, username, password):
-        # Add your login logic here
-        print(f"Logging in with username '{username}' and password '{password}'")
+    def generate_key_pair(self):
+        self.private_key, self.public_key = self.password_manager.generate_key_pair()
+        print(self.private_key)
+        print(self.public_key)
+        print(self.username_entry.get())
+        username = self.username_entry.get()
+        public_key = self.password_manager.get_public_key(username)
+        public_key_bytes = self.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+        print(public_key_bytes.decode('utf-8'))
+        print(self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        ))
+
+
+    def login(self, username):
+        if username == "":
+             messagebox.showerror("Error", "Please provide a username")
+             return
+        # Get the user's public key from the password manager
+        public_key = self.password_manager.get_public_key(username)
+        print(self.public_key)
+        if not public_key:
+            messagebox.showerror("Error", "User not found")
+            return
+
+        # Decrypt the user's password using their private key
+        password = self.password_manager.decrypt_password(self.password_entry.get(), self.private_key)
+
+        # Verify the password using the user's public key
+        # you should use a lambda function to wrap the self.login method call to delay the execution of the method until the button is clicked.
+        # The lambda function returns a function object, and in this case, it wraps the self.login method 
+        # and passes the self.username_entry.get() value as an argument to the method when the button is clicked. This is done to avoid the method being called immediately upon creating the LoginPage object.
+        if not self.password_manager.verify_password(username, password, public_key):
+            messagebox.showerror("Error", "Incorrect password")
+            return
+
+        # Switch to the home page
+        self.controller.show_frame("HomePage")
+
+
 
 class AboutPage(tk.Frame):
 
