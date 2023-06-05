@@ -2,11 +2,11 @@ from security import EncryptedPasswordManager
 
 from gui import GUI
 
-from storage import MerkleTree
+
 
 
 if __name__ == "__main__":
-    master_password = 'mysecretpassword'
+  
     private_key = None
     # Create an instance of the EncryptedPasswordManager
     password_manager = EncryptedPasswordManager()
