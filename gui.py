@@ -23,7 +23,7 @@ class GUI(tk.Tk):
         self.password_manager = EncryptedPasswordManager()
 
         # Add pages to the dictionary
-        for F in (HomePage, AboutPage, ContactPage, LoginPage):
+        for F in (HomePage, AboutPage, ContactPage, LoginPage, KeysCheckPage):
             page_name = F.__name__
             frame = F(parent=container, controller=self, password_manager=self.password_manager)
             self.frames[page_name] = frame
@@ -32,7 +32,7 @@ class GUI(tk.Tk):
             frame.grid(row=0, column=0, sticky="nsew")
 
         # Show the home page initially
-        self.show_frame("LoginPage")
+        self.show_frame("KeysCheckPage")
 
     def show_frame(self, page_name):
         # Show the given frame
@@ -132,30 +132,32 @@ class LoginPage(tk.Frame):
         self.password_entry.pack(pady=5)
 
         # Create login button
+        # you should use a lambda function to wrap the self.login method call to delay the execution of the method until the button is clicked.
+        # The lambda function returns a function object, and in this case, it wraps the self.login method 
+        # and passes the self.username_entry.get() value as an argument to the method when the button is clicked. This is done to avoid the method being called immediately upon creating the LoginPage object
         login_button = tk.Button(self, text="Login", command=lambda: self.login(self.username_entry.get()))
         login_button.pack(pady=5)
         
         # Create generate key pair button
-        generate_key_button = tk.Button(self, text="Generate Key Pair", command=self.generate_key_pair)
+        generate_key_button = tk.Button(self, text="Generate Key Pair", command=self.fetch_key_pair)
         generate_key_button.pack(pady=5)
 
-    def generate_key_pair(self):
-        self.private_key, self.public_key = self.password_manager.generate_key_pair()
+    def fetch_key_pair(self):
+        self.private_key, self.public_key = self.password_manager.fetch_key_pair()
         print(self.private_key)
         print(self.public_key)
         print(self.username_entry.get())
         username = self.username_entry.get()
-        public_key = self.password_manager.get_public_key(username)
         public_key_bytes = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
-        print(public_key_bytes.decode('utf-8'))
-        print(self.private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
+        # print(public_key_bytes.decode('utf-8'))
+        # print(self.private_key.private_bytes(
+        #     encoding=serialization.Encoding.PEM,
+        #     format=serialization.PrivateFormat.PKCS8,
+        #     encryption_algorithm=serialization.NoEncryption()
+        # ))
 
 
     def login(self, username):
@@ -173,15 +175,39 @@ class LoginPage(tk.Frame):
         password = self.password_manager.decrypt_password(self.password_entry.get(), self.private_key)
 
         # Verify the password using the user's public key
-        # you should use a lambda function to wrap the self.login method call to delay the execution of the method until the button is clicked.
-        # The lambda function returns a function object, and in this case, it wraps the self.login method 
-        # and passes the self.username_entry.get() value as an argument to the method when the button is clicked. This is done to avoid the method being called immediately upon creating the LoginPage object.
         if not self.password_manager.verify_password(username, password, public_key):
             messagebox.showerror("Error", "Incorrect password")
             return
 
         # Switch to the home page
         self.controller.show_frame("HomePage")
+
+
+
+class KeysCheckPage(tk.Frame):
+    def __init__(self, parent, controller, password_manager):
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+        self.password_manager = password_manager
+
+        label = tk.Label(self, text="Keys Check Page")
+        label.pack(side="top", fill="x", pady=10)
+
+        # Create check keys button
+        check_keys_button = tk.Button(self, text="Check Keys", command=self.check_keys)
+        check_keys_button.pack(pady=5)
+
+        # Create continue button
+        continue_button = tk.Button(self, text="Continue", command=lambda: controller.show_frame("HomePage"))
+        continue_button.pack(pady=5)
+
+    def check_keys(self):
+        # Check if the public and private keys exist
+        if self.password_manager.find_keys():
+            messagebox.showinfo("Keys Check", "Public and Private keys found!")
+            self.controller.show_frame("LoginPage")
+        else:
+            messagebox.showerror("Keys Check", "Public and Private keys not found!")
 
 
 
